@@ -1,12 +1,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 #include "bseq.h"
 #include "minimap.h"
 #include "mmpriv.h"
 #include "ketopt.h"
 
-#define MM_VERSION "2.17-r943-dirty"
+#define MM_VERSION "2.17-r954-dirty"
 
 #ifdef __linux__
 #include <sys/resource.h>
@@ -172,7 +173,7 @@ int main(int argc, char *argv[])
 		else if (c == 'o') {
 			if (strcmp(o.arg, "-") != 0) {
 				if (freopen(o.arg, "wb", stdout) == NULL) {
-					fprintf(stderr, "[ERROR]\033[1;31m failed to write the output to file '%s'\033[0m\n", o.arg);
+					fprintf(stderr, "[ERROR]\033[1;31m failed to write the output to file '%s'\033[0m: %s\n", o.arg, strerror(errno));
 					exit(1);
 				}
 			}
@@ -322,11 +323,11 @@ int main(int argc, char *argv[])
 		fprintf(fp_help, "    --version    show version number\n");
 		fprintf(fp_help, "  Preset:\n");
 		fprintf(fp_help, "    -x STR       preset (always applied before other options; see minimap2.1 for details) []\n");
-		fprintf(fp_help, "                 - map-pb/map-ont: PacBio/Nanopore vs reference mapping\n");
-		fprintf(fp_help, "                 - ava-pb/ava-ont: PacBio/Nanopore read overlap\n");
-		fprintf(fp_help, "                 - asm5/asm10/asm20: asm-to-ref mapping, for ~0.1/1/5%% sequence divergence\n");
-		fprintf(fp_help, "                 - splice: long-read spliced alignment\n");
-		fprintf(fp_help, "                 - sr: genomic short-read mapping\n");
+		fprintf(fp_help, "                 - map-pb/map-ont - PacBio/Nanopore vs reference mapping\n");
+		fprintf(fp_help, "                 - ava-pb/ava-ont - PacBio/Nanopore read overlap\n");
+		fprintf(fp_help, "                 - asm5/asm10/asm20 - asm-to-ref mapping, for ~0.1/1/5%% sequence divergence\n");
+		fprintf(fp_help, "                 - splice/splice:hq - long-read/Pacbio-CCS spliced alignment\n");
+		fprintf(fp_help, "                 - sr - genomic short-read mapping\n");
 		fprintf(fp_help, "\nSee `man ./minimap2.1' for detailed description of these and other advanced command-line options.\n");
 		return fp_help == stdout? 0 : 1;
 	}
@@ -337,7 +338,7 @@ int main(int argc, char *argv[])
 	}
 	idx_rdr = mm_idx_reader_open(argv[o.ind], &ipt, fnw);
 	if (idx_rdr == 0) {
-		fprintf(stderr, "[ERROR] failed to open file '%s'\n", argv[o.ind]);
+		fprintf(stderr, "[ERROR] failed to open file '%s': %s\n", argv[o.ind], strerror(errno));
 		return 1;
 	}
 	if (!idx_rdr->is_idx && fnw == 0 && argc - o.ind < 2) {
@@ -384,7 +385,7 @@ int main(int argc, char *argv[])
 		mm_split_merge(argc - (o.ind + 1), (const char**)&argv[o.ind + 1], &opt, n_parts);
 
 	if (fflush(stdout) == EOF) {
-		fprintf(stderr, "[ERROR] failed to write the results\n");
+		perror("[ERROR] failed to write the results");
 		exit(EXIT_FAILURE);
 	}
 
